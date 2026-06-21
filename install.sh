@@ -20,7 +20,7 @@ echo -e "${CYAN}========================================${NC}"
 echo ""
 
 # Detect environment
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+if [[ "$OSTYPE" == "linux-gnu"* || "$OSTYPE" == "linux-android"* ]]; then
     if [[ -d /data/data/com.termux ]]; then
         ENV="termux"
         echo -e "${GREEN}✓ Detected: Termux${NC}"

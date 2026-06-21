@@ -39,7 +39,7 @@ class AutoDriveUploader:
         """
         return Panel(
             Align.center("[bold black]🛠️  DESIGNED BY MANOHAR AVINASH  🛠️[/]"),
-            style="on bright_cyan text bold",
+            style="bold on bright_cyan",
             box=None
         )
     
