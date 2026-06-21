@@ -50,7 +50,7 @@ echo ""
 echo -e "${CYAN}Step 2: Installing Python and dependencies...${NC}"
 
 if [[ "$ENV" == "termux" ]]; then
-    apt install -y python python-pip git curl
+    apt install -y python git curl
 else
     sudo apt install -y python3 python3-pip git curl
 fi
@@ -79,18 +79,13 @@ echo ""
 
 echo -e "${CYAN}Step 4: Installing Python packages...${NC}"
 
-# Upgrade pip
+# Install Python packages
 if [[ "$ENV" == "termux" ]]; then
-    pip install --upgrade pip
+    python -m pip install --upgrade pip
+    python -m pip install -r "$SCRIPT_DIR/requirements.txt"
 else
-    pip3 install --upgrade pip
-fi
-
-# Install requirements
-if [[ "$ENV" == "termux" ]]; then
-    pip install -r "$SCRIPT_DIR/requirements.txt"
-else
-    pip3 install -r "$SCRIPT_DIR/requirements.txt"
+    python3 -m pip install --upgrade pip
+    python3 -m pip install -r "$SCRIPT_DIR/requirements.txt"
 fi
 
 echo -e "${GREEN}✓ Python packages installed${NC}"
