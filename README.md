@@ -1,36 +1,37 @@
 # AUTO DRIVE UPLOADER
 
-A Cyberpunk-themed CLI automation tool for uploading files to Google Drive via RClone. Designed for Termux and Linux environments with real-time progress tracking and an interactive menu system.
+A Cyberpunk-themed CLI automation tool for uploading files to Google Drive via RClone.  
+Designed for **Termux (Android)** and **Linux** environments with real-time progress tracking and an interactive menu system.
 
 ---
 
 ## 🎯 Features
 
-- **Real-time Progress Tracking**: Live progress bars with speed and ETA
-- **File & Directory Upload**: Upload single files or entire directory trees
-- **Storage Management**: View quota, usage, and free space
-- **Remote File Listing**: Browse uploaded files in Google Drive
-- **Type-Safe Inputs**: Validates file vs. directory paths before operations
-- **Termux Compatible**: Fully optimized for Android terminal environments
-- **Cyberpunk UI**: Matrix-inspired interface with rich terminal styling
+- **Real-time Progress Tracking** — Live progress bars with speed, percentage, and ETA
+- **File & Directory Upload** — Upload single files or entire directory trees
+- **Storage Management** — View quota, used space, and free space (human-readable: GB/MB)
+- **Remote File Listing** — Browse uploaded files in Google Drive with numbered index
+- **Type-Safe Inputs** — Validates file vs. directory before any operation; clear error messages
+- **Path Safety** — All `~` paths auto-expanded via `os.path.expanduser()`
+- **Termux Compatible** — Fully optimized for Android terminal; auto-detects `python` vs `python3`
+- **Cyberpunk UI** — Matrix-inspired interface with `bright_cyan` Rich terminal styling
+- **Graceful Error Handling** — Custom `RCloneDriveError` with user-friendly messages
+- **Keyboard Interrupt Safe** — Ctrl+C cancels cleanly without crashing
 
 ---
 
 ## 📋 Requirements
 
 - **Python 3.7+**
-- **RClone**: Cloud storage tool
-- **Git**: For version control
-
-### Optional (Installed via `install.sh`)
-- `rich` (>=13.0.0): Terminal UI library
-- `tqdm` (>=4.65.0): Progress bars
+- **RClone** — Cloud storage CLI tool
+- **Git** — For cloning the repository
+- **rich** (>=13.0.0) — Terminal UI library *(installed automatically)*
 
 ---
 
 ## 🚀 Installation
 
-### Quick Setup (Automated)
+### Quick Setup (Automated — Recommended)
 
 ```bash
 git clone https://github.com/manoharavinash/AUTO-DRIVE-UPLOADER.git
@@ -38,12 +39,13 @@ cd AUTO-DRIVE-UPLOADER
 bash install.sh
 ```
 
-The `install.sh` script will:
-1. Update package manager (`apt`)
-2. Install Python and dependencies
-3. Install RClone (if not already present)
-4. Install Python packages from `requirements.txt`
-5. Guide you to configure RClone
+The `install.sh` script will automatically:
+1. Detect your environment (Termux or Linux)
+2. Update the package manager (`apt`)
+3. Install Python, git, and curl
+4. Install RClone (if not already present)
+5. Install Python packages from `requirements.txt`
+6. Guide you to configure the RClone remote
 
 ### Manual Setup
 
@@ -59,6 +61,9 @@ pip install -r requirements.txt
 rclone config
 ```
 
+> **Termux note:** Use `python` instead of `python3` if `python3` is not found.  
+> The scripts detect this automatically.
+
 ---
 
 ## ⚙️ RClone Configuration
@@ -70,17 +75,16 @@ rclone config
 ```
 
 Follow the prompts to:
-1. Create a new remote
-2. Name it exactly: `google auto photo`
-3. Select "Google Drive" as the type
-4. Complete OAuth authentication
+1. Choose `n` → New remote
+2. Name it **exactly**: `google auto photo`
+3. Select **Google Drive** as the type
+4. Complete OAuth authentication in your browser
 
-Verify configuration:
+Verify the remote is set up:
 ```bash
 rclone listremotes
+# Expected output: google auto photo:
 ```
-
-You should see: `google auto photo`
 
 ---
 
@@ -88,141 +92,174 @@ You should see: `google auto photo`
 
 ```
 AUTO-DRIVE-UPLOADER/
-├── requirements.txt          # Python dependencies
-├── install.sh               # Automated setup script
-├── drive.py                 # Low-level RClone wrapper
-├── uploader.py              # Progress tracker & parser
-├── upload.py                # Main orchestrator & UI
-└── README.md                # This file
+├── requirements.txt     # Python dependencies (rich only)
+├── install.sh           # Automated setup (Termux + Linux)
+├── start.sh             # Pre-flight checks + app launcher
+├── drive.py             # Low-level RClone subprocess wrapper
+├── uploader.py          # Real-time progress tracker & parser
+├── upload.py            # Main orchestrator & Cyberpunk UI
+└── README.md            # This file
 ```
 
 ### Module Breakdown
 
-#### `drive.py` - RClone Wrapper
+#### `drive.py` — RClone Wrapper
 - Low-level subprocess interface to RClone
-- Safe path handling with `os.path.expanduser()`
-- Methods: `about()`, `list_files()`, `mkdir()`, `copy()`, `delete()`
-- Custom exception handling: `RCloneDriveError`
+- `_build_remote_path()` — clean, consistent path construction (no slash bugs)
+- `about()` — returns human-readable storage sizes (GB/MB/KB, not raw bytes)
+- `copy()` — uses `--progress --stats 1s --stats-one-line` for reliable stream output
+- `validate_remote()` — uses `rclone listremotes` (lightweight, always works)
+- `delete()` — tries `deletefile` first, falls back to `delete` for directories
+- Custom exception: `RCloneDriveError`
 
-#### `uploader.py` - Progress Tracker
-- Real-time output parsing from RClone
-- Regex patterns for stats extraction
-- Rich progress bar rendering
-- Speed and ETA calculation
+#### `uploader.py` — Progress Tracker
+- Dual regex patterns — handles both rclone output formats automatically
+- `stderr` merged into `stdout` — no output is lost
+- Rich progress bar: spinner + bar + percentage + speed + ETA
+- Clean transfer summary after each upload
+- Safe Ctrl+C handling — terminates subprocess gracefully
 
-#### `upload.py` - Main Orchestrator
-- Interactive CLI menu system
-- File/directory upload workflows
-- Remote file browsing
-- Settings and status display
-- **Mandatory header watermark on every view**
+#### `upload.py` — Main Orchestrator
+- Interactive CLI menu (options 1–5)
+- All user input `.strip()`ped to prevent whitespace path errors
+- `_pause()` helper — correctly uses `input()` without printing raw Rich markup
+- File/directory type mismatch errors shown clearly before any network call
+- Mandatory watermark header on every screen
 
 ---
 
 ## 🎮 Usage
 
-Start the application:
+### Launch
 
 ```bash
+bash start.sh
+# or
 python3 upload.py
+# or (Termux)
+python upload.py
 ```
 
-### Main Menu Options
+### Main Menu
 
 ```
-1. Upload File       - Upload a single file to Google Drive
-2. Upload Directory  - Upload an entire directory tree
-3. List Remote Files - Browse files in Google Drive
-4. Settings          - View app settings and connection status
-5. Exit              - Close the application
+┌─────────────────────────────┐
+│  1  Upload File             │
+│  2  Upload Directory        │
+│  3  List Remote Files       │
+│  4  Settings                │
+│  5  Exit                    │
+└─────────────────────────────┘
 ```
 
-### Example Workflow
+### Example: Upload a File
 
-1. Launch: `python3 upload.py`
-2. Select option `1` to upload a file
-3. Enter local file path: `/home/user/documents/report.pdf`
-4. Enter destination folder: `Reports` (or leave blank for root)
-5. Confirm upload
-6. Watch real-time progress with speed and ETA
+```
+Select option: 1
+Local file path: ~/documents/report.pdf
+Destination folder in Drive: Reports
+
+  File : report.pdf
+  Size : 2.45 MB
+  To   : Reports
+
+Proceed with upload? [Y/n]: Y
+
+⠸ Uploading report.pdf ████████░░  78%  1.2 MB/s  ETA 3s
+✓ Uploading report.pdf completed successfully!
+
+  Transfer Summary
+  File   : report.pdf
+  Size   : 2.45 MB
+  Speed  : 1.2 MB/s
+  Status : ✓  SUCCESS
+```
+
+### Example: Upload a Directory
+
+```
+Select option: 2
+Local directory path: ~/photos/vacation
+Destination folder in Drive: vacation
+
+  Directory  : vacation
+  Files      : 47
+  Total size : 312.80 MB
+  To         : vacation
+
+Proceed with upload? [Y/n]: Y
+```
 
 ---
 
 ## 🎨 UI Design
 
-The application uses a **Cyberpunk/Matrix aesthetic** with:
+The application uses a **Cyberpunk/Matrix aesthetic**:
 
-- **Accent Color**: `bright_cyan` for structural elements
-- **Header Panel**: Mandatory watermark appears on every dashboard:
-  ```
-  🛠️  DESIGNED BY MANOHAR AVINASH  🛠️
-  ```
-- **Table Grids**: Responsive layouts using `Table.grid()`
-- **Real-time Bars**: Progress bars with transfer speed and remaining time
+| Element | Style |
+|---|---|
+| Accent color | `bright_cyan` |
+| Success | `bold green` |
+| Error | `bold red` |
+| Warning | `yellow` |
+| Progress bar | `bright_cyan` with spinner |
+
+**Mandatory watermark** — appears on every screen:
+```
+🛠️  DESIGNED BY MANOHAR AVINASH  🛠️
+```
 
 ---
 
-## 🔒 Security & Safety Features
+## 🔒 Security & Safety
 
-- **Type Checking**: Validates file vs. directory paths before any operation
-- **Path Safety**: All paths expanded with `os.path.expanduser()` for tilde (`~`) support
-- **Error Handling**: Graceful error messages and validation feedback
-- **No Credential Storage**: All auth handled by RClone config
+- **Type checking** — file upload rejects directories; directory upload rejects files
+- **Path safety** — `os.path.expanduser()` on all user-supplied paths
+- **No credentials in code** — all auth handled by RClone config files
+- **Subprocess timeout** — 300s max per command; prevents hangs
+- **Error isolation** — `RCloneDriveError` wraps all subprocess failures cleanly
 
 ---
 
 ## 🐛 Troubleshooting
 
-### RClone Not Found
-```bash
-# Install RClone
-apt install rclone
-
-# Or use official script on Linux
-curl https://rclone.org/install.sh | sudo bash
-```
-
-### Remote 'google auto photo' Not Configured
-```bash
-rclone config
-# Create new remote with name: google auto photo
-```
-
-### Permission Denied on install.sh
-```bash
-chmod +x install.sh
-bash install.sh
-```
-
-### Module Import Errors
-```bash
-pip install -r requirements.txt --force-reinstall
-```
+| Problem | Fix |
+|---|---|
+| `RClone not found` | `bash install.sh` |
+| `Remote not configured` | `rclone config` → name it `google auto photo` |
+| `Permission denied on install.sh` | `chmod +x install.sh && bash install.sh` |
+| `Module not found: rich` | `pip install rich` |
+| `python3: command not found` (Termux) | Use `python upload.py` instead |
+| Upload fails silently | Check internet; run `rclone about "google auto photo:"` to test auth |
+| Storage shows N/A | Re-authenticate: `rclone config reconnect "google auto photo:"` |
 
 ---
 
 ## 📊 Performance
 
-- **Memory**: ~50 MB baseline
-- **Upload Speed**: Limited by network (RClone's throughput)
-- **Scalability**: Handles files up to Google Drive limits (~5 TB)
-- **Real-time Updates**: Progress updates every ~100 KB
+- **Memory** — ~50 MB baseline Python process
+- **CPU** — <1% idle, 2–5% during upload (regex parsing)
+- **Upload speed** — limited by network bandwidth and RClone efficiency
+- **Max file size** — up to Google Drive limits (~5 TB)
+- **Progress refresh** — every 1 second (configurable via `--stats` flag)
 
 ---
 
 ## 🤝 Contributing
 
-Contributions welcome! Please ensure:
+Contributions are welcome! Please ensure:
 - Code follows PEP 8 style guidelines
-- Cyberpunk aesthetic is maintained
-- Mandatory header watermark is preserved on all views
-- Termux compatibility is tested
+- Type hints on all functions
+- Cyberpunk aesthetic is maintained (`bright_cyan` accent)
+- Mandatory watermark preserved on all views
+- Tested on both Termux and Linux
+- `os.path.expanduser()` used for all user paths
 
 ---
 
 ## 📄 License
 
-MIT License - See LICENSE file for details
+MIT License — see LICENSE file for details.
 
 ---
 
@@ -240,3 +277,7 @@ MIT License - See LICENSE file for details
 - [RClone Documentation](https://rclone.org/)
 - [Rich Library Documentation](https://rich.readthedocs.io/)
 - [Python subprocess module](https://docs.python.org/3/library/subprocess.html)
+
+---
+
+*Version 1.0.0 — Updated June 2026*
